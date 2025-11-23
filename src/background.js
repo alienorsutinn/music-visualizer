@@ -25,12 +25,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === 'VISUALIZER_READY') {
     // Ensure the offscreen document exists and deliver the captured stream for analysis.
-    ensureOffscreenDocument().then(() => {
+    ensureOffscreenDocument().then((ready) => {
+      if (!ready) {
+        console.warn('Offscreen document unavailable; cannot start analyser.');
+        return;
+      }
       if (capturedStream) {
-        chrome.runtime.sendMessage({
-          type: 'BEGIN_PROCESSING',
-          stream: capturedStream,
-        }, { transfer: [capturedStream] });
+        try {
+          chrome.runtime.sendMessage(
+            { type: 'BEGIN_PROCESSING', stream: capturedStream },
+            { transfer: [capturedStream] },
+          );
+        } catch (err) {
+          console.error('Failed to transfer MediaStream to offscreen document:', err);
+        }
+      } else {
+        console.warn('No captured stream available when visualizer requested data.');
       }
     });
     return true;
@@ -85,12 +95,17 @@ async function handleStartCapture() {
 }
 
 async function ensureOffscreenDocument() {
-  if (offscreenCreated) return;
+  if (!chrome.offscreen) {
+    console.warn('chrome.offscreen API is unavailable in this context.');
+    return false;
+  }
+
+  if (offscreenCreated) return true;
 
   const contexts = await chrome.offscreen.hasDocument?.();
   if (contexts) {
     offscreenCreated = true;
-    return;
+    return true;
   }
 
   await chrome.offscreen.createDocument({
@@ -99,4 +114,5 @@ async function ensureOffscreenDocument() {
     justification: 'Process captured tab audio and stream analyser data to the visualizer.',
   });
   offscreenCreated = true;
+  return true;
 }
