@@ -1,3 +1,102 @@
+// Background service worker orchestrating tab capture and visualizer communication.
+// Flow:
+// 1. Popup sends START_TAB_CAPTURE -> background captures the current active tab's audio via chrome.tabCapture.
+// 2. Background opens the visualizer tab (extension page) and keeps the MediaStream in memory.
+// 3. Visualizer sends VISUALIZER_READY -> background ensures an offscreen document is running and passes the stream to it.
+// 4. Offscreen document performs Web Audio analysis and streams frequency data back to background.
+// 5. Background relays the analysed data to the visualizer so the UI renders the modes.
+
+let capturedStream = null;
+let visualizerTabId = null;
+let offscreenCreated = false;
+
+const OFFSCREEN_URL = chrome.runtime.getURL('src/offscreen.html');
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Aurora Pulse installed');
 });
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === 'START_TAB_CAPTURE') {
+    handleStartCapture();
+    sendResponse({ ok: true });
+    return true;
+  }
+
+  if (message?.type === 'VISUALIZER_READY') {
+    // Ensure the offscreen document exists and deliver the captured stream for analysis.
+    ensureOffscreenDocument().then(() => {
+      if (capturedStream) {
+        chrome.runtime.sendMessage({
+          type: 'BEGIN_PROCESSING',
+          stream: capturedStream,
+        }, { transfer: [capturedStream] });
+      }
+    });
+    return true;
+  }
+
+  if (message?.type === 'AUDIO_DATA' && visualizerTabId) {
+    chrome.tabs.sendMessage(visualizerTabId, message);
+    return true;
+  }
+
+  if (message?.type === 'VISUALIZER_PORT' && sender?.tab?.id) {
+    visualizerTabId = sender.tab.id;
+    return true;
+  }
+
+  return false;
+});
+
+async function handleStartCapture() {
+  try {
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!activeTab?.id) {
+      console.warn('No active tab found for capture.');
+      return;
+    }
+
+    const stream = await new Promise((resolve, reject) => {
+      chrome.tabCapture.capture(
+        {
+          audio: true,
+          video: false,
+          consumerTabId: activeTab.id,
+        },
+        (captured) => {
+          if (chrome.runtime.lastError || !captured) {
+            reject(chrome.runtime.lastError || new Error('Failed to capture tab audio'));
+          } else {
+            resolve(captured);
+          }
+        },
+      );
+    });
+
+    capturedStream = stream;
+
+    const url = chrome.runtime.getURL('src/visualizer.html');
+    const { id } = await chrome.tabs.create({ url });
+    visualizerTabId = id;
+  } catch (error) {
+    console.error('Error during tab capture:', error);
+  }
+}
+
+async function ensureOffscreenDocument() {
+  if (offscreenCreated) return;
+
+  const contexts = await chrome.offscreen.hasDocument?.();
+  if (contexts) {
+    offscreenCreated = true;
+    return;
+  }
+
+  await chrome.offscreen.createDocument({
+    url: OFFSCREEN_URL,
+    reasons: ['AUDIO_PLAYBACK'],
+    justification: 'Process captured tab audio and stream analyser data to the visualizer.',
+  });
+  offscreenCreated = true;
+}

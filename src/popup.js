@@ -1,6 +1,6 @@
-const openButton = document.getElementById('open-visualizer');
+const startButton = document.getElementById('start-capture');
 
-openButton.addEventListener('click', () => {
-  const url = chrome.runtime.getURL('src/visualizer.html');
-  chrome.tabs.create({ url });
+startButton.addEventListener('click', () => {
+  chrome.runtime.sendMessage({ type: 'START_TAB_CAPTURE' });
+  window.close();
 });

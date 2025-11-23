@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Aurora Pulse – Music Visualizer",
-  "version": "0.1.0",
-  "description": "Real-time audio visualizer using the Web Audio API.",
+  "name": "Aurora Pulse – Tab Visualizer",
+  "version": "0.2.0",
+  "description": "Real-time visualizer driven by the current tab's audio.",
   "action": {
     "default_popup": "src/popup.html"
   },
@@ -10,5 +10,6 @@
     "service_worker": "src/background.js",
     "type": "module"
   },
-  "permissions": []
+  "permissions": ["tabCapture", "activeTab"],
+  "host_permissions": ["<all_urls>"]
 }

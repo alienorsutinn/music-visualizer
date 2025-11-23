@@ -7,15 +7,19 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="visualizer">
-  <div class="controls">
-    <h1 class="title">Aurora Pulse</h1>
-    <p class="subtitle">Feel the music through reactive neon bars.</p>
-    <div class="buttons">
-      <button id="start" class="primary">Start Visualizer</button>
-      <button id="stop" class="secondary">Stop</button>
+  <header class="control-bar">
+    <div class="brand">
+      <span class="logo-dot"></span>
+      <span class="app-name">Aurora Pulse</span>
     </div>
-  </div>
-  <canvas id="canvas"></canvas>
+    <div class="mode-toggle" role="group" aria-label="Visualizer modes">
+      <button id="mode-bars" class="pill active" type="button">Bars</button>
+      <button id="mode-radial" class="pill" type="button">Radial</button>
+    </div>
+  </header>
+  <main class="visualizer-stage">
+    <canvas id="canvas"></canvas>
+  </main>
   <script src="visualizer.js"></script>
 </body>
 </html>
