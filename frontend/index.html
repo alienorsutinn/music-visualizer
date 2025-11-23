@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Music Visualizer</title>
+  <link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Music Visualizer</h1>
+      <p>Upload a track to analyze and drive visuals.</p>
+    </header>
+
+    <section class="controls">
+      <input type="file" id="fileInput" accept="audio/*" />
+      <button id="analyzeButton">Analyze &amp; Play</button>
+      <div class="backend-url">
+        Backend URL: <span id="backendUrl"></span>
+      </div>
+    </section>
+
+    <section class="debug">
+      <h2>Analysis Debug</h2>
+      <ul>
+        <li><strong>BPM:</strong> <span id="bpmValue">-</span></li>
+        <li><strong>Beats:</strong> <span id="beatCount">-</span></li>
+        <li><strong>Sections:</strong> <span id="sectionLabels">-</span></li>
+      </ul>
+    </section>
+
+    <section class="visuals">
+      <canvas id="visualCanvas" width="800" height="400"></canvas>
+    </section>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

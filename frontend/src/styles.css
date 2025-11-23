@@ -1,0 +1,77 @@
+:root {
+  --bg: #0b0c10;
+  --panel: #1f2833;
+  --text: #c5c6c7;
+  --accent: #66fcf1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+header h1 {
+  margin: 0;
+  color: var(--accent);
+}
+
+.controls,
+.debug,
+.visuals {
+  background: var(--panel);
+  padding: 16px;
+  border-radius: 10px;
+  margin-top: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.controls input[type='file'] {
+  margin-right: 12px;
+}
+
+button {
+  background: var(--accent);
+  color: #0b0c10;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.debug ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.visuals canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  background: #0b0c10;
+}
+
+.backend-url {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: #9ba0aa;
+}
