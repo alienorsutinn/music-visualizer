@@ -15,6 +15,8 @@ let sourceNode = null;
 let animationId = null;
 let outputGain = null;
 let activeElement = null;
+let bandEnergy = { low: 0, mid: 0, high: 0 };
+let beatLevel = 0;
 
 function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
@@ -49,8 +51,8 @@ async function ensureAnalyser() {
   }
   if (!analyser) {
     analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = 0.85;
+    analyser.fftSize = 4096;
+    analyser.smoothingTimeConstant = 0.82;
     analyser.maxDecibels = -10;
     analyser.minDecibels = -90;
     dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -143,6 +145,68 @@ function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 
+function frequencyToIndex(hz) {
+  if (!audioContext || !analyser) return 0;
+  const nyquist = audioContext.sampleRate / 2;
+  return Math.min(
+    analyser.frequencyBinCount - 1,
+    Math.max(0, Math.round((hz / nyquist) * analyser.frequencyBinCount)),
+  );
+}
+
+function analyzeSpectrum() {
+  analyser.getByteFrequencyData(dataArray);
+
+  const sampleCount = mode === 'bars' ? 160 : 200;
+  const samples = new Array(sampleCount).fill(0);
+  const binCount = dataArray.length - 1;
+
+  for (let i = 0; i < sampleCount; i++) {
+    // Log-like distribution to emphasise lows/mids while keeping highs reactive.
+    const t = i / (sampleCount - 1);
+    const logIndex = Math.pow(t, 1.35) * binCount;
+    const idx = Math.min(binCount, Math.max(0, Math.floor(logIndex)));
+    const value = dataArray[idx];
+    const eased = Math.pow(value / 255, 0.85) * 255;
+    samples[i] = eased;
+  }
+
+  const smoothing = 0.22;
+  samples.forEach((value, index) => {
+    smoothed[index] = lerp(smoothed[index] || 0, value, smoothing);
+  });
+
+  // Band energies for low / mid / high dynamics and a loose beat accent.
+  const lowRange = [frequencyToIndex(20), frequencyToIndex(180)];
+  const midRange = [frequencyToIndex(180), frequencyToIndex(2000)];
+  const highRange = [frequencyToIndex(2000), frequencyToIndex(8000)];
+
+  function averageRange([start, end]) {
+    const s = Math.max(0, Math.min(start, dataArray.length - 1));
+    const e = Math.max(s + 1, Math.min(end, dataArray.length));
+    let sum = 0;
+    for (let i = s; i < e; i++) sum += dataArray[i];
+    return sum / (e - s);
+  }
+
+  const low = averageRange(lowRange) / 255;
+  const mid = averageRange(midRange) / 255;
+  const high = averageRange(highRange) / 255;
+
+  bandEnergy.low = lerp(bandEnergy.low, low, 0.1);
+  bandEnergy.mid = lerp(bandEnergy.mid, mid, 0.1);
+  bandEnergy.high = lerp(bandEnergy.high, high, 0.1);
+
+  const rms = Math.sqrt(samples.reduce((acc, v) => acc + (v * v), 0) / samples.length) / 255;
+  const avg = (bandEnergy.low + bandEnergy.mid + bandEnergy.high) / 3;
+  if (rms > avg * 1.3) {
+    beatLevel = 1;
+  }
+  beatLevel *= 0.9;
+
+  return { samples: smoothed.slice(), energies: { ...bandEnergy }, beat: beatLevel };
+}
+
 function draw() {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
@@ -153,71 +217,100 @@ function draw() {
     return;
   }
 
-  analyser.getByteFrequencyData(dataArray);
-
-  const sampleCount = mode === 'bars' ? 96 : 140;
-  const step = Math.max(1, Math.floor(dataArray.length / sampleCount));
-
-  const samples = new Array(sampleCount).fill(0).map((_, i) => {
-    const start = i * step;
-    let sum = 0;
-    for (let j = start; j < Math.min(start + step, dataArray.length); j++) {
-      sum += dataArray[j];
-    }
-    return sum / step;
-  });
-
-  const smoothing = 0.18;
-  samples.forEach((value, index) => {
-    smoothed[index] = lerp(smoothed[index] || 0, value, smoothing);
-  });
+  const analysis = analyzeSpectrum();
 
   if (mode === 'bars') {
-    renderBars(smoothed, width, height);
+    renderBars(analysis, width, height);
   } else {
-    renderRadial(smoothed, width, height);
+    renderRadial(analysis, width, height);
   }
 
   animationId = requestAnimationFrame(draw);
 }
 
-function renderBars(values, width, height) {
-  const barCount = values.length;
-  const barWidth = Math.max(3, width / barCount);
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, '#9f7aea');
-  gradient.addColorStop(0.35, '#22d3ee');
-  gradient.addColorStop(1, '#0ea5e9');
+function renderBars({ samples, energies, beat }, width, height) {
+  const centerSpread = Math.floor(samples.length * 0.5);
+  const half = Math.floor(centerSpread / 2);
+  const barWidth = Math.max(4, width / (half * 2 + 2));
 
-  for (let i = 0; i < barCount; i++) {
-    const magnitude = values[i] / 255;
-    const eased = Math.pow(magnitude, 1.5);
-    const barHeight = eased * (height * 0.7);
-    const x = i * barWidth;
+  const gradient = ctx.createLinearGradient(0, height * 0.2, 0, height);
+  const brightness = 0.6 + energies.high * 0.4;
+  gradient.addColorStop(0, `rgba(155, 139, 255, ${brightness})`);
+  gradient.addColorStop(0.35, `rgba(34, 211, 238, ${brightness})`);
+  gradient.addColorStop(1, `rgba(14, 165, 233, ${brightness})`);
+
+  const centerGlow = ctx.createRadialGradient(
+    width / 2,
+    height * 0.55,
+    10,
+    width / 2,
+    height * 0.55,
+    height * 0.5,
+  );
+  centerGlow.addColorStop(0, `rgba(90, 235, 255, ${0.28 + beat * 0.4})`);
+  centerGlow.addColorStop(1, 'rgba(5, 9, 20, 0)');
+  ctx.fillStyle = centerGlow;
+  ctx.fillRect(0, 0, width, height);
+
+  const center = samples.length / 2;
+  for (let i = 0; i < half; i++) {
+    const leftIndex = center - i - 1;
+    const rightIndex = center + i;
+    const combined = (samples[leftIndex] + samples[rightIndex]) / 2;
+
+    const weight = Math.exp(-Math.pow((i - half * 0.2) / (half * 0.6), 2));
+    const magnitude = Math.pow((combined / 255) * weight, 1.4);
+
+    const barHeight = magnitude * (height * (0.65 + energies.low * 0.3));
+    const xLeft = width / 2 - (i + 1) * barWidth;
+    const xRight = width / 2 + i * barWidth;
     const y = height - barHeight;
 
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.roundRect(x + 2, y, barWidth - 4, barHeight, 8);
+    ctx.roundRect(xLeft + 2, y, barWidth - 4, barHeight, 10);
+    ctx.roundRect(xRight + 2, y, barWidth - 4, barHeight, 10);
+    ctx.fill();
+  }
+
+  // Accent dots driven by mid/high bands for extra crispness.
+  const dotCount = 32;
+  for (let i = 0; i < dotCount; i++) {
+    const t = i / dotCount;
+    const idx = Math.floor(t * samples.length);
+    const level = samples[idx] / 255;
+    const angle = t * Math.PI * 2;
+    const radius = (height * 0.14) + level * 60 + energies.mid * 40;
+    const x = width / 2 + Math.cos(angle) * radius;
+    const y = height * 0.58 + Math.sin(angle) * (radius * 0.4);
+    ctx.fillStyle = `hsla(${200 + energies.high * 80}, 85%, ${60 + level * 30}%, ${0.25 + level * 0.5})`;
+    ctx.beginPath();
+    ctx.arc(x, y, 2 + level * 3 + beat * 2, 0, Math.PI * 2);
     ctx.fill();
   }
 }
 
-function renderRadial(values, width, height) {
-  const radius = Math.min(width, height) * 0.22;
+function renderRadial({ samples, energies, beat }, width, height) {
   const cx = width / 2;
-  const cy = height / 2 + 20;
-  const spokeCount = values.length;
+  const cy = height / 2 + 10;
+  const radius = Math.min(width, height) * (0.2 + energies.low * 0.1);
+  const spokeCount = samples.length;
   const angleStep = (Math.PI * 2) / spokeCount;
 
   ctx.save();
   ctx.translate(cx, cy);
 
+  const halo = ctx.createRadialGradient(0, 0, radius * 0.25, 0, 0, radius * 1.6);
+  halo.addColorStop(0, `rgba(146, 118, 255, ${0.3 + beat * 0.5})`);
+  halo.addColorStop(1, 'rgba(5, 9, 20, 0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(-width, -height, width * 2, height * 2);
+
   for (let i = 0; i < spokeCount; i++) {
-    const magnitude = values[i] / 255;
-    const eased = Math.pow(magnitude, 1.4);
-    const inner = radius;
-    const outer = radius + eased * radius * 1.3;
+    const magnitude = samples[i] / 255;
+    const tone = Math.pow(magnitude, 1.2);
+    const inner = radius * (0.7 + energies.mid * 0.2);
+    const outer = inner + tone * radius * (1.1 + energies.high * 0.6 + beat * 0.4);
     const angle = i * angleStep;
 
     const x1 = Math.cos(angle) * inner;
@@ -225,29 +318,20 @@ function renderRadial(values, width, height) {
     const x2 = Math.cos(angle) * outer;
     const y2 = Math.sin(angle) * outer;
 
-    const hue = 180 + i * 0.7;
-    ctx.strokeStyle = `hsla(${hue}, 80%, 65%, 0.9)`;
-    ctx.lineWidth = 3;
+    const hue = 180 + energies.high * 60 + i * 0.35;
+    ctx.strokeStyle = `hsla(${hue}, 85%, ${60 + tone * 25}%, ${0.55 + beat * 0.25})`;
+    ctx.lineWidth = 2.6;
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.fillStyle = `hsla(${hue}, 95%, 70%, 0.9)`;
-    ctx.arc(x2, y2, 5 + eased * 6, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${hue + 20}, 95%, ${65 + energies.high * 20}%, ${0.55 + tone * 0.4})`;
+    ctx.arc(x2, y2, 4 + tone * 6 + beat * 2, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  const glow = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius * 1.2);
-  glow.addColorStop(0, 'rgba(34, 211, 238, 0.25)');
-  glow.addColorStop(1, 'rgba(12, 18, 34, 0)');
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.arc(0, 0, radius * 1.25, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalCompositeOperation = 'source-over';
   ctx.restore();
 }
 
