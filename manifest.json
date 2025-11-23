@@ -10,6 +10,6 @@
     "service_worker": "src/background.js",
     "type": "module"
   },
-  "permissions": ["tabCapture", "activeTab"],
+  "permissions": ["tabCapture", "activeTab", "offscreen"],
   "host_permissions": ["<all_urls>"]
 }
