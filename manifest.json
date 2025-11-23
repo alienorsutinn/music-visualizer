@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Aurora Pulse – Tab Visualizer",
-  "version": "0.2.0",
-  "description": "Real-time visualizer driven by the current tab's audio.",
+  "name": "Aurora Pulse – Audio Visualizer",
+  "version": "0.3.0",
+  "description": "Visualize microphone or uploaded audio with immersive modes.",
   "action": {
     "default_popup": "src/popup.html"
   },
@@ -10,6 +10,6 @@
     "service_worker": "src/background.js",
     "type": "module"
   },
-  "permissions": ["tabCapture", "activeTab", "offscreen"],
-  "host_permissions": ["<all_urls>"]
+  "permissions": [],
+  "host_permissions": []
 }

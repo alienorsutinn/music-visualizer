@@ -1,24 +1,24 @@
-const startButton = document.getElementById('start-capture');
+const openButton = document.getElementById('open-visualizer');
 const statusEl = document.getElementById('status');
 
-startButton.addEventListener('click', async () => {
-  startButton.disabled = true;
-  startButton.textContent = 'Starting…';
+openButton.addEventListener('click', async () => {
+  openButton.disabled = true;
+  openButton.textContent = 'Opening…';
   statusEl.textContent = '';
 
   try {
-    const response = await chrome.runtime.sendMessage({ type: 'START_TAB_CAPTURE' });
+    const response = await chrome.runtime.sendMessage({ type: 'OPEN_VISUALIZER' });
     if (response?.ok) {
       window.close();
       return;
     }
 
-    const reason = response?.error || 'Unable to start tab audio capture.';
+    const reason = response?.error || 'Unable to open the visualizer tab.';
     statusEl.textContent = reason;
   } catch (err) {
-    statusEl.textContent = 'Extension could not start capture. Check permissions and try again.';
+    statusEl.textContent = 'Extension could not open the visualizer. Please try again.';
   } finally {
-    startButton.disabled = false;
-    startButton.textContent = 'Capture this tab and open visualizer';
+    openButton.disabled = false;
+    openButton.textContent = 'Open visualizer';
   }
 });
