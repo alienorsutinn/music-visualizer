@@ -1,32 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aurora Film Engine (Prototype)</title>
-  <link rel="stylesheet" href="src/styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aurora Audio Analysis Lab</title>
+  <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
   <div id="app">
     <header class="top-bar">
-      <div class="brand">Aurora Film Engine (Prototype)</div>
-      <label class="file-button" for="file-input">Drop a track
-        <input type="file" id="file-input" accept="audio/*" />
+      <div class="brand">Aurora Audio Analysis Lab</div>
+      <label class="file-button">
+        Select audio
+        <input type="file" id="file-input" accept="audio/*">
       </label>
-      <button id="play-pause" class="control">Play</button>
-      <select id="scene-select" class="control">
-        <option value="side-scroller">Side-scroller journey</option>
-        <option value="moving-room">Moving room performance</option>
-      </select>
+      <button id="analyze" class="control">Analyze</button>
+      <button id="play-pause" class="control" disabled>Play</button>
+      <div class="status" id="status">Choose a file to begin.</div>
     </header>
 
-    <main class="canvas-wrapper" id="drop-zone">
-      <canvas id="visualizer"></canvas>
-      <div class="drop-hint">Drop your audio file anywhere</div>
+    <main class="layout">
+      <section class="panel">
+        <h2>Overview</h2>
+        <div class="stat-grid">
+          <div class="stat">
+            <span class="label">Estimated BPM</span>
+            <span class="value" id="bpm">-</span>
+          </div>
+          <div class="stat">
+            <span class="label">Beats</span>
+            <span class="value" id="beat-count">-</span>
+          </div>
+          <div class="stat">
+            <span class="label">Onsets</span>
+            <span class="value" id="onset-count">-</span>
+          </div>
+        </div>
+
+        <h3>Sections</h3>
+        <ul id="sections" class="sections"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>Realtime Debug</h2>
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Time (s)</th>
+              <th>On beat?</th>
+              <th>Low</th>
+              <th>Mid</th>
+              <th>High</th>
+              <th>Overall</th>
+              <th>Event</th>
+              <th>Section</th>
+            </tr>
+          </thead>
+          <tbody id="log-body"></tbody>
+        </table>
+      </section>
     </main>
   </div>
 
   <audio id="audio" crossorigin="anonymous"></audio>
-  <script src="src/engine.js"></script>
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>

@@ -1,14 +1,21 @@
-# Aurora Film Engine (Prototype)
+# Aurora Audio Analysis Lab
 
-A plain HTML/CSS/JS music film experiment that turns any dropped audio file into a tiny animated scene.
+A plain HTML/JS/CSS prototype that focuses on **offline audio analysis** so later visuals can feel musical. It decodes a selected track, extracts band energies, onsets, tempo/beat grid, and rough song sections, and exposes the data through a simple `AudioEngine` API.
 
-## Scenes
-- **Side-scroller journey**: a Californication-inspired ride across rolling terrain, crystals, and parallax layers. The player icon hops on beats, the world shifts per energy, and each act uses different hues.
-- **Moving room performance**: a Jamiroquai-style elastic room where floor and walls slide, tilt, and pulse. The center stage glows with bass, and beats snap the room into exaggerated poses.
+## Files
+- `index.html` – minimal UI to pick a file, run analysis, play audio, and inspect debug info.
+- `src/audioEngine.js` – offline analysis engine (frame energies, onsets, tempo, beat grid, sections).
+- `src/main.js` – UI glue that wires the engine to the page and realtime debug table.
+- `src/styles.css` – layout and styling for the debug panel.
 
-## Usage
-1. Open `index.html` in your browser (no build step required).
-2. Drop or select an audio file (mp3/wav/etc.).
-3. Choose a scene and hit Play/Pause to control playback.
+## How to run
+1. Open `index.html` in your browser (no build tools required).
+2. Select an audio file (mp3/wav/ogg) and click **Analyze**.
+3. When analysis completes, press **Play**. The realtime debug table will show beat alignment, band energies, onset type, and current section.
 
-The visuals rely on the Web Audio API (AudioContext + AnalyserNode) to react to frequency energy and simple beat detection.
+## Feature API (summary)
+- `AudioEngine.loadFile(file)` decodes the file, runs offline analysis, and stores results.
+- `AudioEngine.attachToAudioElement(audio)` connects playback to the same `AudioContext`.
+- `AudioEngine.getFeaturesAtTime(t)` returns low/mid/high/overall energies, beat proximity, onset flags (kick/snare/hat), and section index.
+- `AudioEngine.getBeatGrid()` returns `{ bpm, beats }` for downstream syncing.
+- `AudioEngine.getSections()` returns coarse song sections with labels like intro/build/drop/break.
