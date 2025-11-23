@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aurora Forge – Audio Visualizer</title>
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="top-bar">
+      <div class="brand">
+        <div class="title">Aurora Forge</div>
+        <div class="subtitle">Drop a track. Forge the visuals.</div>
+      </div>
+      <div class="controls">
+        <label class="file-input">
+          <span>Choose audio file</span>
+          <input type="file" id="filePicker" accept="audio/*">
+        </label>
+        <button id="playBtn" class="pill">Play</button>
+        <button id="pauseBtn" class="pill ghost">Pause</button>
+        <select id="modeSelect" class="pill select">
+          <option value="neon">Neon Bars</option>
+          <option value="halo">Halo Ring</option>
+          <option value="blob">Liquid Blob</option>
+        </select>
+        <button id="fullscreenBtn" class="pill ghost" title="Toggle full screen">Full screen</button>
+        <div class="file-info">
+          <span id="fileName">No file loaded</span>
+          <span id="timeInfo">00:00 / 00:00</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="stage">
+      <canvas id="visualizerCanvas"></canvas>
+    </main>
+  </div>
+
+  <script src="src/visualizer.js"></script>
+</body>
+</html>
