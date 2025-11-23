@@ -18,8 +18,7 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'START_TAB_CAPTURE') {
-    handleStartCapture();
-    sendResponse({ ok: true });
+    handleStartCapture().then(sendResponse);
     return true;
   }
 
@@ -61,10 +60,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 async function handleStartCapture() {
   try {
+    if (!chrome.tabCapture || typeof chrome.tabCapture.capture !== 'function') {
+      const reason = 'chrome.tabCapture.capture is unavailable; check permissions and browser support.';
+      console.error(reason);
+      return { ok: false, error: reason };
+    }
+
     const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!activeTab?.id) {
       console.warn('No active tab found for capture.');
-      return;
+      return { ok: false, error: 'No active tab found to capture.' };
     }
 
     const stream = await new Promise((resolve, reject) => {
@@ -89,8 +94,10 @@ async function handleStartCapture() {
     const url = chrome.runtime.getURL('src/visualizer.html');
     const { id } = await chrome.tabs.create({ url });
     visualizerTabId = id;
+    return { ok: true };
   } catch (error) {
     console.error('Error during tab capture:', error);
+    return { ok: false, error: error?.message || 'Failed to capture tab audio.' };
   }
 }
 
@@ -108,11 +115,16 @@ async function ensureOffscreenDocument() {
     return true;
   }
 
-  await chrome.offscreen.createDocument({
-    url: OFFSCREEN_URL,
-    reasons: ['AUDIO_PLAYBACK'],
-    justification: 'Process captured tab audio and stream analyser data to the visualizer.',
-  });
-  offscreenCreated = true;
-  return true;
+  try {
+    await chrome.offscreen.createDocument({
+      url: OFFSCREEN_URL,
+      reasons: ['AUDIO_PLAYBACK'],
+      justification: 'Process captured tab audio and stream analyser data to the visualizer.',
+    });
+    offscreenCreated = true;
+    return true;
+  } catch (err) {
+    console.error('Failed to create offscreen document:', err);
+    return false;
+  }
 }

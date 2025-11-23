@@ -138,6 +138,13 @@ canvas {
   font-size: 14px;
 }
 
+.status {
+  min-height: 18px;
+  margin: 12px 0 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .primary {
   width: 100%;
   padding: 12px 16px;
