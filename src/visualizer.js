@@ -127,20 +127,30 @@
     const { width, height } = getDimensions();
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    // Hard clear the canvas before drawing, preventing previous frames from stacking.
+    ctx.clearRect(0, 0, width, height);
+
     const g = ctx.createLinearGradient(0, 0, width, height);
     const shift = (Math.sin(gradientShift) + 1) / 2;
-    g.addColorStop(0, `rgba(16, 30, 60, 0.8)`);
-    g.addColorStop(1, `rgba(${20 + shift * 30}, ${40 + shift * 40}, 75, 0.78)`);
+    g.addColorStop(0, `rgb(12, 18, 34)`);
+    g.addColorStop(1, `rgb(${18 + shift * 24}, ${38 + shift * 38}, 72)`);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, width, height);
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.015)';
-    for (let i = 0; i < 3; i += 1) {
-      const radius = Math.sin(gradientShift * (i + 1)) * 120 + 260;
-      ctx.beginPath();
-      ctx.arc(width * Math.random(), height * Math.random(), Math.abs(radius), 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // Subtle, deterministic glow bands to add motion without leaving trails.
+    const glow = ctx.createRadialGradient(width * 0.25, height * 0.2, 80, width * 0.25, height * 0.2, width * 0.8);
+    glow.addColorStop(0, 'rgba(90, 150, 255, 0.08)');
+    glow.addColorStop(1, 'rgba(90, 150, 255, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, height);
+
+    const glow2 = ctx.createRadialGradient(width * 0.8, height * 0.15, 40, width * 0.8, height * 0.15, width * 0.6);
+    glow2.addColorStop(0, 'rgba(255, 124, 210, 0.08)');
+    glow2.addColorStop(1, 'rgba(255, 124, 210, 0)');
+    ctx.fillStyle = glow2;
+    ctx.fillRect(0, 0, width, height);
+
     ctx.restore();
   }
 
