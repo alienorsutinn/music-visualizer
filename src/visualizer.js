@@ -13,6 +13,8 @@ let dataArray = new Uint8Array(0);
 let smoothed = [];
 let sourceNode = null;
 let animationId = null;
+let outputGain = null;
+let activeElement = null;
 
 function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
@@ -40,6 +42,11 @@ async function ensureAnalyser() {
   if (!audioContext) {
     audioContext = new AudioContext();
   }
+  if (!outputGain) {
+    outputGain = audioContext.createGain();
+    outputGain.gain.value = 1;
+    outputGain.connect(audioContext.destination);
+  }
   if (!analyser) {
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 2048;
@@ -50,12 +57,35 @@ async function ensureAnalyser() {
   }
 }
 
-function setSource(node) {
+function stopActiveMediaElement() {
+  if (!activeElement) return;
+  try {
+    activeElement.pause();
+    activeElement.src = '';
+    activeElement.load();
+  } catch (e) {
+    console.warn('Unable to stop previous media element', e);
+  }
+  activeElement = null;
+}
+
+function setSource(node, { monitor = false, element = null } = {}) {
   if (sourceNode) {
     try { sourceNode.disconnect(); } catch (e) {}
   }
+  if (element) {
+    stopActiveMediaElement();
+    activeElement = element;
+  }
   sourceNode = node;
   sourceNode.connect(analyser);
+  if (monitor && outputGain) {
+    try {
+      sourceNode.connect(outputGain);
+    } catch (e) {
+      console.warn('Failed to route audio to output', e);
+    }
+  }
   hideOverlay();
 }
 
@@ -65,7 +95,7 @@ async function startMicrophone() {
     await audioContext.resume();
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     const micSource = audioContext.createMediaStreamSource(stream);
-    setSource(micSource);
+    setSource(micSource, { monitor: false });
   } catch (err) {
     console.error('Microphone capture failed', err);
     showOverlay('Microphone unavailable', 'Check mic permissions or choose an audio file instead.');
@@ -92,7 +122,7 @@ async function startFilePlayback(url) {
     audio.play();
 
     const elementSource = audioContext.createMediaElementSource(audio);
-    setSource(elementSource);
+    setSource(elementSource, { monitor: true, element: audio });
   } catch (err) {
     console.error('Failed to play selected file', err);
     showOverlay('Playback error', 'The selected file could not be played.');
