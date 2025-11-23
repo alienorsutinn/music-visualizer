@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aurora Pulse – Music Visualizer</title>
+  <title>Aurora Pulse – Audio Visualizer</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="popup">
   <div class="popup-content">
     <h1 class="title">Aurora Pulse</h1>
-    <p class="subtitle">Real-time audio visualizer using your microphone.</p>
-    <button id="open-visualizer" class="primary">Open Visualizer</button>
+    <p class="subtitle">Launch the visualizer and feed it mic or uploaded audio.</p>
+    <button id="open-visualizer" class="primary">Open visualizer</button>
+    <p class="status" id="status" aria-live="polite"></p>
   </div>
   <script src="popup.js"></script>
 </body>
